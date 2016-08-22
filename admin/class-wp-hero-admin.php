@@ -45,6 +45,8 @@ class Wp_Hero_Admin {
       true
     );
 
+    //wp_localize_script( $this->plugin_name, 'ajax_object', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
+
 	}
 
 	/**
@@ -94,6 +96,15 @@ class Wp_Hero_Admin {
     );
 
     add_meta_box(
+      $this->plugin_name . '_hero_media_meta_box',      // Unique ID
+      esc_html__( 'Media', $this->plugin_name ),    // Title
+      array( &$this, 'render_hero_media_meta_box'),   // Callback function
+      'hero',         // Admin page (or post type)
+      'normal',       // Context
+      'default'       // Priority
+    );
+
+    add_meta_box(
       $this->plugin_name . '_hero_background_meta_box',      // Unique ID
       esc_html__( 'Background', $this->plugin_name ),    // Title
       array( &$this, 'render_hero_background_meta_box'),   // Callback function
@@ -125,31 +136,63 @@ class Wp_Hero_Admin {
   public function render_hero_editor_meta_box( $post, $box ) { 
 
       // Get the currently selected option
-      $post_meta = get_metadata('post', $post->ID);
-      //log_it($post_meta[$this->plugin_name . '_feature-image'][0]);
+      //$post_meta = get_metadata('post', $post->ID);
 
-      wp_nonce_field( basename( __FILE__ ),  'hero_editor_nonce' );?>
+      wp_nonce_field( basename( __FILE__ ),  'hero_editor_nonce' );
 
-      <?php $content = get_post_meta($post->ID, $this->plugin_name . '_copy', true);
-      wp_editor( $content, $this->plugin_name . '_copy', $settings = array() );?>
-
-      <p class="hide-if-no-js">
-        <a class="button-secondary" title="Set Footer Image" href="javascript:;" id="set-feature-image">Set feature image</a>
-      </p>
-
+      $content = get_post_meta($post->ID, $this->plugin_name . '_copy', true);
+      wp_editor( $content, $this->plugin_name . '_copy', $settings = array() );
       
-        <?php if(isset($post_meta[$this->plugin_name . '_feature-image'][0])){
-          echo '<div id="feature-image-container"><img src="' . $post_meta[$this->plugin_name . '_feature-image'][0] . '" alt="" title="lalala" /></div>';
-        }else{
-          echo '<div id="feature-image-container" class="hidden"><img src="" alt="" title="" /></div>';
-        }?>
-        <input type="text" id="feature-image-src" class="large-text" name="<?php echo $this->plugin_name . '_feature-image';?>" value="<?php echo isset($post_meta[$this->plugin_name . '_feature-image'][0]) ? $post_meta[$this->plugin_name . '_feature-image'][0] : '';?>" />
+  }
 
-      <p class="hide-if-no-js hidden">
-        <a title="Remove Feature Image" href="javascript:;" id="remove-feature-image">Remove feature image</a>
-      </p><!-- .hide-if-no-js -->
+  public function render_hero_media_meta_box( $post, $box ) { 
+      $current_media_type = get_post_meta($post->ID, $this->plugin_name . '_media-type', true);
+      ?>
+      <label>Media type</label><br />
+      <select name="<?php echo $this->plugin_name;?>_media-type" id="<?php echo $this->plugin_name;?>_media-type">
+        <option value="image" <?php echo $current_media_type == 'image' ? 'selected="selected"' : '';?>>Image</option>
+        <option value="video" <?php echo $current_media_type == 'video' ? 'selected="selected"' : '';?>>Video</option>
+      </select>
+      <div class="spinner" style="float:none;width:auto;height:auto;padding:10px 0 10px 
+50px;background-position:20px 0;"></div>
+      <div id="wp_hero-media-fields"><?php $this->render_media_fields($post->ID, $current_media_type);?></div>
 
   <?php }
+
+  public function get_media_fields($post_id = null, $media_type = null)
+  {
+    $this->render_media_fields($post_id, $media_type);
+    wp_die();
+  }
+
+  public function render_media_fields($post_id, $media_type)
+  {
+    if(isset($_POST['mediaType'])){
+      $post_id = $_POST['post_id'];
+      $media_type = $_POST['mediaType'];
+    }
+    $post_meta = get_metadata('post', $post_id);
+
+    log_it($post_id);
+
+    switch ($media_type){
+
+      case 'video':
+        echo '<label>YouTube or Vimeo video URL</lable>';
+        echo '<input type="url" class="large-text" name="' . $this->plugin_name . '_video-url" value="' . $post_meta[$this->plugin_name . '_video-url'][0] . '" />';
+
+        echo '<label>Or embed code <em>(Will overwrite url above)</em></label><br />';
+        echo '<textarea name="' . $this->plugin_name . '_video-embed-code" cols="80" rows="10" class="large-text">' . $post_meta[$this->plugin_name . '_video-embed-code'][0] . '</textarea>';
+        break;
+
+      case 'image' :
+        $meta_key = $this->plugin_name . '_feature-image';
+        $this->show_media_picker($post_id, $meta_key, 'Set feature image');
+        break;
+    }
+  }
+
+
 
   /* Display the post meta box. */
   public function render_hero_background_meta_box( $object, $box ) { 
@@ -165,17 +208,13 @@ class Wp_Hero_Admin {
           <label>Background colour</label><br />
           <input type="text" value="<?php echo isset($post_meta[$this->plugin_name . '_background-color']) ? $post_meta[$this->plugin_name . '_background-color'][0] : '';?>" class="color-picker" name="<?php echo $this->plugin_name;?>_background-color" data-default-color="#ffffff" />
         </p>
+
         <label>Background image</label>
         <p class="description"><?php echo _e( "(Optional)", $this->plugin_name );?></p>
-        <a class="button-secondary" title="Set Feature background Image" href="javascript:;" id="set-background-image">Set background image</a>
-        <div id="background-image-container" class="hidden">
-            <?php if(isset($post_meta[$this->plugin_name . '_background-image'][0])){
-              echo '<img src="' . $post_meta[$this->plugin_name . '_background-image'][0] . '" alt="" title="" />';
-            }else{
-              echo '<img src="" alt="" title="" />';
-            }?>
-            <input type="text" id="background-image-src" class="large-text" name="<?php echo $this->plugin_name . '_background-image';?>" value="<?php isset($post_meta[$this->plugin_name . '_background-image'][0]) ? post_meta[$this->plugin_name . '_background-image'][0] : '';?>" />
-        </div>
+
+        <?php  $this->show_media_picker($object->ID, $this->plugin_name . '_background-image', 'Set background image');?>
+
+        
         <p>
           <label>Repeat background?</label><br />
           <input type="radio" name="<?php echo $this->plugin_name;?>_background-repeat" value="repeat" /> Yes <br />
@@ -244,7 +283,7 @@ public function render_hero_activate_meta_box( $object, $box ) {
      $is_active = get_post_meta($object->ID, $this->plugin_name . '_is-active', true);
 
      // Add nonce field - use meta key name with '_nonce' appended
-     wp_nonce_field( basename( __FILE__ ), $link_url . '_nonce' );?>
+     //wp_nonce_field( basename( __FILE__ ), $link_url . '_nonce' );?>
 
      <p class="description"><?php  _e( "Make this the currently active feature (will remove the current one and replace it)", $this->plugin_name );?></p>
 
@@ -256,11 +295,44 @@ public function render_hero_activate_meta_box( $object, $box ) {
 
  <?php }
 
+
+
+ private function show_media_picker($post_id, $meta_key, $label)
+ {
+   $current_media = get_post_meta($post_id, $meta_key, true); ?>
+
+   <p class="hide-if-no-js  <?php echo $current_media != '' ? 'hidden' : '';?>">
+     <a class="wp-hero-media-select button-secondary" title="Select media" href="javascript:;" data-meta-key="<?php echo $meta_key;?>"><?php echo $label;?></a>
+   </p>
+
+   <?php if($current_media != ''){ ?>
+
+     <div class="image-container" data-meta-key="<?php echo $meta_key;?>">
+       <img src="<?php echo $current_media;?>" alt="" title="Current feature image" />
+     </div>
+
+   <?php }else{ ?>
+
+     <div class="image-container" data-meta-key="<?php echo $meta_key;?>" class="hidden"><img src="" alt="" title="" /></div>
+   
+   <?php }?>
+
+   <p class="hide-if-no-js <?php echo $current_media != '' ? '' : 'hidden';?>">
+     <a title="Remove Media" href="javascript:;" class="wp-hero-remove-media" data-meta-key="<?php echo $meta_key;?>">Remove</a>
+   </p>
+   
+   <input type="text" class="image-src large-text" data-meta-key="<?php echo $meta_key;?>" name="<?php echo $meta_key;?>" value="<?php echo $current_media != '' ? $current_media : '';?>" />
+
+ <?php }
+
   public function save_hero_meta( $post_id, $post )
   {
+    $this->save_meta($post_id, $post, $this->plugin_name . '_media-type');
     $this->save_meta($post_id, $post, $this->plugin_name . '_feature-image');
+    $this->save_meta($post_id, $post, $this->plugin_name . '_video-url');
+    $this->save_meta($post_id, $post, $this->plugin_name . '_video-embed-code');
     $this->save_meta($post_id, $post, $this->plugin_name . '_copy');
-    $this->save_meta($post_id, $post, $this->plugin_name . '_background');
+    $this->save_meta($post_id, $post, $this->plugin_name . '_background-image');
     $this->save_meta($post_id, $post, $this->plugin_name . '_background-repeat');
     $this->save_meta($post_id, $post, $this->plugin_name . '_background-align');
     $this->save_meta($post_id, $post, $this->plugin_name . '_background-color'); 

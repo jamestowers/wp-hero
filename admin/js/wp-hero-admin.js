@@ -2,7 +2,7 @@
 	* Media uploader script
 	* see: http://code.tutsplus.com/tutorials/getting-started-with-the-wordpress-media-uploader--cms-22011
  */
-function renderMediaUploader() {
+function renderMediaUploader(metaKey) {
     'use strict';
  
     var file_frame, image_data, json;
@@ -29,23 +29,23 @@ function renderMediaUploader() {
 	    }
 	 
 	    // After that, set the properties of the image and display it
-	    $( '#feature-image-container' )
+	    $( '.image-container[data-meta-key="' + metaKey + '"]' )
 	        .children( 'img' )
 	            .attr( 'src', json.url )
 	            .attr( 'alt', json.caption )
 	            .attr( 'title', json.title )
-	                        .show()
-	        .parent()
-	        .removeClass( 'hidden' );
+	            .show()
+	            .parent()
+	            .removeClass( 'hidden' );
 
-	    $( '#feature-image-src' ).val( json.url );
+	    $( '.image-src[data-meta-key="' + metaKey + '"]' ).val( json.url );
 	 
 	    // Next, hide the anchor responsible for allowing the user to select an image
-	    $( '#feature-image-container' )
+	    $( '.image-container[data-meta-key="' + metaKey + '"]' )
 	        .prev()
 	        .hide();
 	     // Display the anchor for the removing the featured image
-			$( '#feature-image-container' )
+			$( '.image-container[data-meta-key="' + metaKey + '"]' )
 		    .next()
 		    .show();
 
@@ -59,39 +59,68 @@ function renderMediaUploader() {
  
 }
 
-function resetUploadForm( $ ) {
+function resetUploadForm( metaKey ) {
     'use strict';
  
-    $( '#feature-image-container' )
+    $( '.image-container[data-meta-key="' + metaKey + '"]' )
         .children( 'img' )
         .hide();
 
-    $( '#feature-image-container' )
+    $( '.image-container[data-meta-key="' + metaKey + '"]' )
         .prev()
         .show();
  
-    $( '#feature-image-container' )
+    $( '.image-container[data-meta-key="' + metaKey + '"]' )
         .next()
         .hide()
         .addClass( 'hidden' );
 
-    $( '#feature-image-src' ).val( '' );
+    $( '.image-src[data-meta-key="' + metaKey + '"]' ).val( '' );
  
 }
 
 (function( $ ) {
 	'use strict';
+  console.log('[WP Hero] init')
 
 	$('.color-picker').wpColorPicker();
 
-	$( '#set-feature-image' ).on( 'click', function( evt ) {
-      evt.preventDefault();
-			renderMediaUploader();
+	$( '.wp-hero-media-select' ).on( 'click', function( e ) {
+      var metaKey;
+      e.preventDefault();
+      metaKey = e.target.dataset.metaKey;
+			renderMediaUploader(metaKey);
   });
 
-  $( '#remove-feature-image' ).on( 'click', function( evt ) {
-      evt.preventDefault();
-   		resetUploadForm( $ );
+  $( '.wp-hero-remove-media' ).on( 'click', function( e ) {
+      var metaKey;
+      e.preventDefault();
+      metaKey = e.target.dataset.metaKey;
+   		resetUploadForm( metaKey );
+  });
+
+  $('#wp-hero_media-type').on('change', function( e ){
+    $.ajax({
+      url: ajaxurl,
+      data: {
+        'action': 'get_media_fields',
+        'mediaType': $(this).val(),
+        'post_id': $('input[name="post_ID"]').val()
+      },
+      type: 'post',
+      beforeSend: function() {
+        return $('.spinner').addClass('is-active');
+      },
+      success: function(html){
+        $('#wp_hero-media-fields').html(html);
+      },
+      error: function(xhr, status, error){
+        return console.error(error);
+      },
+      complete: function() {
+        return $('.spinner').removeClass('is-active');
+      }
+    });
   });
 
 })( jQuery );

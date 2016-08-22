@@ -57,6 +57,8 @@ class Wp_Hero {
 		$this->loader->add_action( 'load-post.php', $plugin_admin, 'post_meta_boxes_setup' );
 		$this->loader->add_action( 'load-post-new.php', $plugin_admin, 'post_meta_boxes_setup' );
 
+		$this->loader->add_action( 'wp_ajax_get_media_fields', $plugin_admin, 'get_media_fields' );
+
 	}
 
 

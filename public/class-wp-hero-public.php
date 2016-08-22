@@ -66,14 +66,35 @@ class Wp_Hero_Public {
 		<style>
 			.wp-hero{
 				background-color: <?php echo isset($hero[$prefix . 'background-color']) ? $hero[$prefix . 'background-color'][0] : 'transparent';?>;
-				background-image: <?php echo isset($hero[$prefix . 'background-image']) ? $hero[$prefix . 'background-image'][0] : 'none';?>;
+				background-image: <?php echo isset($hero[$prefix . 'background-image']) ? 'url(' . $hero[$prefix . 'background-image'][0] . ')' : 'none';?>;
+				background-size: cover;
+			}
+			.wp-hero-copy{
+				background-color: <?php echo isset($hero[$prefix . 'background-color']) ? $hero[$prefix . 'background-color'][0] : 'transparent';?>;
 			}
 		</style>
 
 		<div class="wp-hero pad">
 			
-			<?php if(isset($hero[$prefix . 'feature-image'])){
-				echo '<div class="wp-hero-thumbnail"><img src="' . $hero[$prefix . 'feature-image'][0] . '" /></div>';
+			<?php switch($hero[$prefix . 'media-type'][0]){
+
+				case 'image' :
+					if(isset($hero[$prefix . 'feature-image'])){
+						echo '<div class="wp-hero-thumbnail"><img src="' . $hero[$prefix . 'feature-image'][0] . '" /></div>';
+					}
+					break;
+
+				case 'video' :
+					if(isset($hero[$prefix . 'video-embed'])){
+						echo '<div class="wp-hero-video">' . $hero[$prefix . 'video-embed'][0] . '</div>';
+					}elseif(isset($hero[$prefix . 'video-url'])){
+						$embed_code = wp_oembed_get($hero[$prefix . 'video-url'][0]);
+						echo '<div class="wp-hero-video">' . $embed_code . '</div>';
+					}else{
+						echo '<div class="wp-hero-video">No video</div>';
+					}
+					break;
+					
 			}?>
 
 			<?php if(isset($hero[$prefix . 'copy'])){
@@ -87,4 +108,14 @@ class Wp_Hero_Public {
 	}
 
 
+}
+
+/**
+ * Static function to display the projects date range
+ * @param  [Int] $project_id [The project ID]
+ * @return [Method] [Method from above class]
+ */
+function get_hero()
+{
+	return Wp_Hero_Public::get_active_hero($project_id);
 }
